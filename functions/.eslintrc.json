@@ -47,8 +47,8 @@
     // Disallow null comparisons without type-checking operators
     "no-eq-null": 2,
 
-    // Warn against use of eval()
-    "no-eval": 1,
+    // Disallow the use of eval()
+    "no-eval": 2,
 
     // Warn against extending native types
     "no-extend-native": 1,

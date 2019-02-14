@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/png" href="/nuxeo/icons/favicon.png" />
+    <link rel="shortcut icon" type="image/x-icon" href="/nuxeo/icons/favicon.ico" />
+    <title>Enterprise Content</title>
+
+    <style type="text/css">
+    <!--
+      * {
+        box-sizing: border-box;
+        -webkit-box-sizing: border-box;
+      }
+      html, body {
+        height: 100%;
+        overflow: hidden;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font: normal 16px/22pt "Lucida Grande", Arial, sans-serif;
+        background: #f2f2f2;
+        color: #343434;
+      }
+      header {
+        background-color: #fff;
+        text-align: center;
+        padding: .8em 1em .3em;
+      }
+      header img {
+        max-height: 3em;
+      }
+      .container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: calc(100% - 10em);
+      }
+      .content {
+        margin: 0;
+        background-color: #fff;
+        padding: 1.7em;
+      }
+      .content > * {
+        flex: 1 1 auto;
+        -webkit-box-flex: 1;
+        width: 100%;
+      }
+      input[type="text"] {
+        line-height: 1.5em;
+        font-size: 1em;
+        padding: .4em .5em;
+      }
+      .buttons {
+        display: flex;
+        justify-content: space-between;
+        margin: 1.2em 0 0;
+      }
+      .button {
+        flex-basis: 46%;
+        border: 0;
+        background-color: #f2f2f2;
+        cursor: pointer;
+        font-weight: normal;
+        line-height: 1.5em;
+        font-size: 1em;
+        padding: .7em 1.2em;
+        text-decoration: none;
+        /* Remove iOS corners and glare on inputs */
+        border-radius: 0;
+        -webkit-appearance: none;
+        -webkit-border-radius: 0;
+      }
+      .button:hover,
+      .button:focus {
+        box-shadow: 0 -5px 0 rgba(0, 0, 0, 0.3) inset;
+        outline: none;
+      }
+      .button.primary {
+        background-color: #0066ff;
+        color: white;
+        font-weight: bold;
+      }
+      button.disabled {
+        cursor: not-allowed;
+      }
+      @media all and (min-width: 500px) {
+        form {
+          padding: 2.5em;
+          width: 40em;
+        }
+      }
+    -->
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Enterprise Content</h1>
+    </header>
+    <div class="container">
+      <div class="content">
+        <span>Please enter your Nuxeo host</span>
+        <input type="text" id="nuxeoHost" placeholder="your.nuxeo.host" size="30" required />
+        <div class="buttons">
+          <button class="button" onclick="process();">CONNECT</button>
+        </div>
+      </div>
+    </div>
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        process = function() {
+          var nuxeoHost = document.getElementById('nuxeoHost').value;
+          location = location.origin + '/oauth2Authorize' + location.search + '&nuxeoHost=' + nuxeoHost;
+        };
+      });
+    </script>
+  </body>
+</html>

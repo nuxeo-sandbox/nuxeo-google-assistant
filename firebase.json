@@ -2,6 +2,29 @@
   "functions": {
     "predeploy": [
       "yarn --cwd \"$RESOURCE_DIR\" run lint"
+    ],
+    "source": "functions"
+  },
+  "hosting": {
+    "public": "public",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "/oauth2Authorize",
+        "function": "oauth2Authorize"
+      },
+      {
+        "source": "/oauth2Redirect",
+        "function": "oauth2Redirect"
+      },
+      {
+        "source": "/oauth2Token",
+        "function": "oauth2Token"
+      }
     ]
   }
 }
