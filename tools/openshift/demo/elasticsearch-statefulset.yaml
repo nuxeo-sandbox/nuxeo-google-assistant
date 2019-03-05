@@ -1,0 +1,123 @@
+apiVersion: apps/v1beta1
+kind: StatefulSet
+metadata:
+  labels:
+    app: google-assistant-demo
+    component: elasticsearch
+    role: data
+  name: elasticsearch
+spec:
+  serviceName: elasticsearch
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: google-assistant-demo
+        component: elasticsearch
+    spec:
+      serviceAccountName: elasticsearch
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 1
+            podAffinityTerm:
+              topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels:
+                  app: google-assistant-demo
+                  component: elasticsearch
+                  role: data
+      initContainers:
+      # see https://www.elastic.co/guide/en/elasticsearch/reference/current/vm-max-map-count.html
+      # and https://www.elastic.co/guide/en/elasticsearch/reference/current/setup-configuration-memory.html#mlockall
+      - name: "sysctl"
+        image: "busybox"
+        imagePullPolicy: "Always"
+        command: ["sysctl", "-w", "vm.max_map_count=262144"]
+        securityContext:
+          privileged: true
+      - name: "chown"
+        image: "docker.elastic.co/elasticsearch/elasticsearch:6.4.0"
+        imagePullPolicy: "IfNotPresent"
+        command:
+        - /bin/bash
+        - -c
+        - chown -R elasticsearch:elasticsearch /usr/share/elasticsearch/data &&
+          chown -R elasticsearch:elasticsearch /usr/share/elasticsearch/logs
+        securityContext:
+          runAsUser: 0
+        volumeMounts:
+        - mountPath: /usr/share/elasticsearch/data
+          name: data
+      containers:
+      - name: elasticsearch
+        env:
+        - name: KUBERNETES_MASTER
+          value: kubernetes.default.svc.cluster.local
+        - name: KUBERNETES_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: NODE_MASTER
+          value: "true"
+        - name: PROCESSORS
+          valueFrom:
+            resourceFieldRef:
+              resource: limits.cpu
+        - name: EXPECTED_MASTER_NODES
+          value: "1"
+        - name: RECOVER_AFTER_MASTER_NODES
+          value: "1"
+        - name: ES_JAVA_OPTS
+          value: "-Djava.net.preferIPv4Stack=true -Xms256m -Xmx256m"
+        - name: MINIMUM_MASTER_NODES
+          value: "1"
+        image: "docker.elastic.co/elasticsearch/elasticsearch:6.4.0"
+        imagePullPolicy: "IfNotPresent"
+        ports:
+        - containerPort: 9200
+          name: client
+        resources:
+            limits:
+              cpu: "1"
+            requests:
+              cpu: 25m
+              memory: 256m
+
+        readinessProbe:
+          httpGet:
+            path: /_cluster/health?wait_for_status=yellow
+            port: 9200
+          initialDelaySeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /_cluster/health?wait_for_status=yellow
+            port: 9200
+          initialDelaySeconds: 90
+        volumeMounts:
+        - mountPath: /usr/share/elasticsearch/data
+          name: data
+        - mountPath: /usr/share/elasticsearch/config/elasticsearch.yml
+          name: config
+          subPath: elasticsearch.yml
+        - mountPath: /usr/share/elasticsearch/config/logging.yml
+          name: config
+          subPath: logging.yml
+      terminationGracePeriodSeconds: 3600
+      volumes:
+      - name: config
+        configMap:
+          name: google-assistant-demo-elasticsearch-config
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+      labels:
+        app: google-assistant-demo
+      annotations:
+        volume.beta.kubernetes.io/storage-class: gp2
+    spec:
+      accessModes:
+        - "ReadWriteOnce"
+      resources:
+        requests:
+          storage: 5Gi

@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nuxeo
+  labels:
+    app: google-assistant-demo
+    component: nuxeo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: google-assistant-demo
+      component: nuxeo
+  template:
+    metadata:
+      labels:
+        app: google-assistant-demo
+        component: nuxeo
+    spec:
+      containers:
+        - name: nuxeo
+          env:
+            - name: NUXEO_TEMPLATES
+              value: "default,mongodb,mongodb-audit"
+            - name: NUXEO_PACKAGES
+              value: nuxeo-jsf-ui nuxeo-web-ui nuxeo-showcase-content
+            - name: NUXEO_URL
+              value: https://google-assistant-demo.apps.prod.nuxeo.io/nuxeo
+            - name: NUXEO_ES_HOSTS
+              value: elasticsearch:9200
+            - name: NUXEO_ES_CLUSTERNAME
+              value: nuxeo
+            - name: NUXEO_ES_REPLICAS
+              value: "0"
+            - name: NUXEO_BINARY_STORE
+              value: /binaries/binaries
+            - name: NUXEO_CUSTOM_PARAM
+              value: |
+                nuxeo.mongodb.server=mongodb://mongo-0.mongo:27017
+                elasticsearch.client=RestClient
+                elasticsearch.httpReadOnly.baseUrl=http://elasticsearch:9200
+                elasticsearch.indexName=nuxeo
+                mail.transport.host=aws-smtp-relay.common.svc
+                mail.from=noreply@nuxeo.io
+          image: 'nuxeo/nuxeo:master'
+          imagePullPolicy: Always
+          livenessProbe:
+            httpGet:
+              path: /nuxeo/runningstatus
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 180
+            timeoutSeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /nuxeo/runningstatus
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /binaries
+              name: binaries
+            - mountPath: /docker-entrypoint-initnuxeo.d
+              name: nuxeo-config              
+            - mountPath: /opt/nuxeo/connect/
+              name: nuxeo-connect
+      volumes:
+        - name: binaries
+          persistentVolumeClaim:
+            claimName: nuxeo-binaries
+        - name: nuxeo-config
+          configMap:
+            name: nuxeo-config
+            defaultMode: 420
+        - name: nuxeo-connect
+          secret:
+            secretName: nuxeo-connect
+            defaultMode: 420
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30

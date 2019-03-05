@@ -1,0 +1,57 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: google-assistant-demo-elasticsearch-config
+  labels:
+    app: google-assistant-demo
+    component: elasticsearch
+    role: config
+data:
+  elasticsearch.yml: |-
+    cluster.name: nuxeo
+
+    node.data: ${NODE_DATA:true}
+    node.master: ${NODE_MASTER:true}
+    node.ingest: ${NODE_INGEST:true}
+    node.name: ${HOSTNAME}
+
+    network.host: 0.0.0.0
+
+    # see https://github.com/kubernetes/kubernetes/issues/3595
+    bootstrap.memory_lock: ${BOOTSTRAP_MEMORY_LOCK:false}
+
+    discovery:
+      zen:
+        minimum_master_nodes: ${MINIMUM_MASTER_NODES}
+
+    # see https://www.elastic.co/guide/en/x-pack/current/xpack-settings.html
+    xpack.ml.enabled: ${XPACK_ML_ENABLED:false}
+    xpack.monitoring.enabled: ${XPACK_MONITORING_ENABLED:false}
+    xpack.security.enabled: ${XPACK_SECURITY_ENABLED:false}
+    xpack.watcher.enabled: ${XPACK_WATCHER_ENABLED:false}
+
+    # see https://github.com/elastic/elasticsearch-definitive-guide/pull/679
+    processors: ${PROCESSORS:}
+
+    # avoid split-brain w/ a minimum consensus of two masters plus a data node
+    gateway.expected_master_nodes: ${EXPECTED_MASTER_NODES:2}
+    gateway.expected_data_nodes: ${EXPECTED_DATA_NODES:1}
+    gateway.recover_after_time: ${RECOVER_AFTER_TIME:5m}
+    gateway.recover_after_master_nodes: ${RECOVER_AFTER_MASTER_NODES:2}
+    gateway.recover_after_data_nodes: ${RECOVER_AFTER_DATA_NODES:1}
+  logging.yml: |-
+    # you can override this using by setting a system property, for example -Des.logger.level=DEBUG
+    es.logger.level: INFO
+    rootLogger: ${es.logger.level}, console
+    logger:
+      # log action execution errors for easier debugging
+      action: DEBUG
+      # reduce the logging for aws, too much is logged under the default INFO
+      com.amazonaws: WARN
+
+    appender:
+      console:
+        type: console
+        layout:
+          type: consolePattern
+          conversionPattern: "[%d{ISO8601}][%-5p][%-25c] %m%n"

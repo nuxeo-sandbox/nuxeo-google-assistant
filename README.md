@@ -20,6 +20,8 @@ A [function](https://console.firebase.google.com/u/0/project/nuxeo-1b48c/functio
 
 ## Nuxeo Server Configuration
 
+The server configured by default is the [Nuxeo Demo for the Google Assistant](https://google-assistant-demo.apps.prod.nuxeo.io/nuxeo/).
+
 To configure the Nuxeo server, you need to:
 - Update the `serverURL` property in the [config.json](functions/config.json) file.
 - Update the [Account linking](https://console.actions.google.com/u/0/project/nuxeo-1b48c/accountlinking/) settings with:

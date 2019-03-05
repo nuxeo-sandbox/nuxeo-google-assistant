@@ -1,0 +1,13 @@
+# register a route for the google-assistant-demo service, pointing to https://google-assistant-demo.apps.prod.nuxeo.io
+apiVersion: v1
+kind: Route
+metadata:
+  name: nuxeo-route
+spec:
+  host: google-assistant-demo.apps.prod.nuxeo.io
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+  to:
+    kind: Service
+    name: nuxeo

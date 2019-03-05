@@ -1,0 +1,18 @@
+# register a service for the nuxeo node
+apiVersion: v1
+kind: Service
+metadata:
+  name: nuxeo
+  labels:
+    app: google-assistant-demo
+    component: nuxeo
+spec:
+  ports:
+    - name: 8080-tcp
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
+  selector:
+    app: google-assistant-demo
+    component: nuxeo
+  sessionAffinity: None

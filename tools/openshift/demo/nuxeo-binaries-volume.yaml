@@ -1,0 +1,12 @@
+# volume claim for nuxeo data, including elasticsearch
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nuxeo-binaries
+spec:
+  accessModes:
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: shared

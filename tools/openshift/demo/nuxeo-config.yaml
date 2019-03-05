@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nuxeo-config
+  labels:
+    app: google-assistant-demo
+    component: nuxeo
+data:
+  init.sh: >
+    #!/bin/sh
+
+    if [ ! -f $NUXEO_DATA/instance.clid -a -f
+    /opt/nuxeo/connect/connect.properties ]; then
+      . /opt/nuxeo/connect/connect.properties
+      if [ -n "$USERNAME" -a -n "$PASSWORD" -a -n "$STUDIO_PROJECT" ]; then
+        echo "---> Registering instance on connect"
+        nuxeoctl register $USERNAME $STUDIO_PROJECT dev openshift $PASSWORD
+      fi
+    fi
+  nuxeo.conf: |
+    # additional conf

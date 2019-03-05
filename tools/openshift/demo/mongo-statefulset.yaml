@@ -1,0 +1,38 @@
+apiVersion: apps/v1beta1
+kind: StatefulSet
+metadata:
+  name: mongo
+spec:
+  serviceName: mongo
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: google-assistant-demo
+        component: mongo
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+        - name: mongo
+          image: mongo:3.4
+          command:
+            - mongod
+            - "--smallfiles"
+            - "--noprealloc"
+          ports:
+            - containerPort: 27017
+          volumeMounts:
+            - name: data
+              mountPath: /data/db
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+      labels:
+        app: google-assistant-demo
+      annotations:
+        volume.beta.kubernetes.io/storage-class: gp2
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 5Gi
