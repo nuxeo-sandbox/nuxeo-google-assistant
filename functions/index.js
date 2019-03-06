@@ -3,6 +3,7 @@
 const {
   dialogflow,
   SignIn,
+  Suggestions,
   UnauthorizedError,
 } = require('actions-on-google')
 const functions = require('firebase-functions');
@@ -37,19 +38,27 @@ app.intent('Default Welcome Intent', (conv) => {
   return welcome(conv);
 });
 
-app.intent('Sign In', (conv, _, signin) => {
-  // Sign in failed
-  if (signin.status !== 'OK') {
-    return signIn(conv, 'Something went wrong during the sign in process.');
+app.intent('Signed In', (conv, _, signin) => {
+  switch (signin.status) {
+    // User successfully completed the account linking
+    case 'OK':
+      return getUserDetails(conv)
+        .then(() => {
+          const firstName = getUserFirstName(conv);
+          const userInfo = firstName ? ` as ${firstName}` : '';
+          return conv.ask(`You successfully signed in${userInfo}. You can sign out by saying "sign out".`);
+        });
+    // Cancelled or dismissed account linking
+    case 'CANCELLED':
+      conv.ask('What would you like to do?');
+      // Currently, when the signin.status is 'CANCELLED', trying to sign in again results in "Sorry, I did not get any response."
+      // See https://github.com/actions-on-google/actions-on-google-nodejs/issues/231#issuecomment-470281010
+      // return conv.ask(new Suggestions(['Sign in', 'Quit']));
+      return conv.ask(new Suggestions(['Quit']));
+    // System/network error or unknown status
+    default:
+      return signIn(conv, 'Something went wrong during the sign in process.');
   }
-
-  // Signed in
-  return getUserDetails(conv)
-    .then(() => {
-      const firstName = getUserFirstName(conv);
-      const userInfo = firstName ? ` as ${firstName}` : '';
-      return conv.ask(`You successfully signed in${userInfo}. You can sign out by saying "sign out".`);
-    });
 });
 
 app.intent('Sign Out', (conv) => {
@@ -58,6 +67,10 @@ app.intent('Sign Out', (conv) => {
   // See https://github.com/actions-on-google/actions-on-google-nodejs/issues/289
   // conv.ask('You successfully signed out. You can sign in back by saying "sign in".');
   throw new UnauthorizedError();
+});
+
+app.intent('Sign In', (conv) => {
+  return signIn(conv);
 });
 
 const signIn = (conv, prefix) => {
