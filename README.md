@@ -60,7 +60,7 @@ The Dialogflow agent version matching the current git revision is described in t
 Install the dependencies.
 
 ```
-yarn --cwd functions
+yarn --cwd functions --ignore-engines
 ```
 
 Update the `app` object in [index.js](functions/index.js).
