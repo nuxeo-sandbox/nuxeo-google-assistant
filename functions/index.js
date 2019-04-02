@@ -9,7 +9,7 @@ const {
   SignIn,
   Suggestions,
   UnauthorizedError,
-} = require('actions-on-google')
+} = require('actions-on-google');
 const functions = require('firebase-functions');
 const moment = require('moment');
 const Nuxeo = require('nuxeo');
@@ -20,7 +20,7 @@ const config = require('./config.json');
 const app = dialogflow({
   debug: true,
   clientId: 'nuxeo-google-assistant',
-})
+});
 
 // Project configuration
 const { serverURL } = config;
@@ -33,7 +33,10 @@ const CONTEXT_SEARCH = 'context-search';
 app.intent('Default Welcome Intent', async (conv) => {
   if (!conv.user.access.token) {
     // Sign in if needed
-    signIn(conv, 'Welcome to your Nuxeo assistant.\nYou can search any content from your Nuxeo instance.');
+    signIn(
+      conv,
+      'Welcome to your Nuxeo assistant.\nYou can search any content from your Nuxeo instance.',
+    );
   } else if (!conv.data.user) {
     // Get and store user information if needed
     await getAndStoreUser(conv);
@@ -84,16 +87,12 @@ app.intent('Search', async (conv, params) => {
 });
 
 app.intent('Search - Refine by Tag', async (conv) => {
-  let {
-    term,
-    tag,
-    tags,
-  } = getSearchContextParameters(conv);
+  let { term, tag, tags } = getSearchContextParameters(conv);
   // Keep track of tags
   if (!tags) {
     tags = [];
   }
-  tags.push(tag)
+  tags.push(tag);
   setTagsContextParameter(conv, tags);
   await search(conv, term, tags);
 });
@@ -110,13 +109,13 @@ app.intent('Search - Select Document', async (conv, _, option) => {
   }
 });
 
-app.intent('Search - Select Document - Back to Search Results', async (conv) => {
-  const {
-    term,
-    tags,
-  } = getSearchContextParameters(conv);
-  await search(conv, term, tags);
-});
+app.intent(
+  'Search - Select Document - Back to Search Results',
+  async (conv) => {
+    const { term, tags } = getSearchContextParameters(conv);
+    await search(conv, term, tags);
+  },
+);
 
 // --------------------------------------------------------
 // Intent helpers
@@ -124,10 +123,10 @@ app.intent('Search - Select Document - Back to Search Results', async (conv) => 
 const signIn = (conv, prefix) => {
   const signInPrefix = prefix ? `${prefix}\n` : '';
   conv.ask(new SignIn(`${signInPrefix}To access your content`));
-}
+};
 
 const welcome = (conv) => {
-  const date = new Date().getHours()
+  const date = new Date().getHours();
   let greetings;
   if (date < 12) {
     greetings = 'Good morning';
@@ -142,10 +141,11 @@ const welcome = (conv) => {
   conv.ask(new Suggestions(['Search', 'Sign out']));
 };
 
-const getSearchContextParameters = (conv) => conv.contexts.get(CONTEXT_SEARCH).parameters;
+const getSearchContextParameters = (conv) =>
+  conv.contexts.get(CONTEXT_SEARCH).parameters;
 
 const setTagsContextParameter = (conv, tags) => {
-  conv.contexts.set(CONTEXT_SEARCH, 1, { tags })
+  conv.contexts.set(CONTEXT_SEARCH, 1, { tags });
 };
 
 const search = async (conv, term, tags) => {
@@ -153,18 +153,23 @@ const search = async (conv, term, tags) => {
     const nuxeo = getNuxeoClient(conv);
     const results = await searchDocuments(nuxeo, term, tags);
     const count = results.resultsCount;
-    const tagInfo = tags && tags.length > 0 ? ` tagged ${tags.join(' and ')}` : '';
+    const tagInfo =
+      tags && tags.length > 0 ? ` tagged ${tags.join(' and ')}` : '';
     const criterion = `${term}${tagInfo}`;
     // No results
     if (count === 0) {
-      conv.ask(`Uh oh, I didn't find any document when searching for ${criterion}.`);
+      conv.ask(
+        `Uh oh, I didn't find any document when searching for ${criterion}.`,
+      );
       conv.ask(new Suggestions('Try another search'));
       return;
     }
     // Single result
     if (count === 1) {
       conv.ask(`I found 1 document when searching for ${criterion}:`);
-      conv.ask(new BasicCard(getDocumentCardProperties(nuxeo, results.entries[0])));
+      conv.ask(
+        new BasicCard(getDocumentCardProperties(nuxeo, results.entries[0])),
+      );
       conv.ask(new Suggestions('Try another search'));
       return;
     }
@@ -191,16 +196,21 @@ const getDocumentCardProperties = (nuxeo, doc) => {
   return {
     title: doc.title,
     subtitle: doc.properties['dc:description'],
-    text: `🕘 Last modified: ${formatDate(doc.lastModified)}  \n`
-      + `🕘 Created: ${formatDate(doc.properties["dc:created"])} by ${getUserDisplayName(doc.properties["dc:creator"])}  \n`
-      + `👨‍ Contributors: ${doc.properties["dc:contributors"].map(getUserDisplayName).join(', ')}  \n`
-      + `🏳️ Tags: ${doc.contextParameters.tags}`,
+    text:
+      `🕘 Last modified: ${formatDate(doc.lastModified)}  \n` +
+      `🕘 Created: ${formatDate(
+        doc.properties['dc:created'],
+      )} by ${getUserDisplayName(doc.properties['dc:creator'])}  \n` +
+      `👨‍ Contributors: ${doc.properties['dc:contributors']
+        .map(getUserDisplayName)
+        .join(', ')}  \n` +
+      `🏳️ Tags: ${doc.contextParameters.tags}`,
     image: new Image({
       url: nuxeo.authenticateURL(doc.contextParameters.thumbnail.url),
       alt: doc.title,
     }),
   };
-}
+};
 
 const getDocumentListItemProperties = (nuxeo, doc) => {
   return {
@@ -215,12 +225,12 @@ const getDocumentListItemProperties = (nuxeo, doc) => {
 
 const formatDate = (date) => {
   return moment(date).format('LL');
-}
+};
 
 // --------------------------------------------------------
 // Nuxeo helpers
 // --------------------------------------------------------
-const DOCUMENT_ENRICHERS  = [
+const DOCUMENT_ENRICHERS = [
   'thumbnail',
   'favorites',
   'documentURL',
@@ -230,32 +240,35 @@ const DOCUMENT_ENRICHERS  = [
   'tags',
 ];
 
-const getNuxeoClient = (conv) => new Nuxeo({
-  baseURL: serverURL,
-  auth: {
-    token: conv.user.access.token,
-    method:'bearerToken',
-  },
-  headers: {
-    'translate.directoryEntry': 'label',
-    'Accept-Language': conv.user.locale,
-  },
-  schemas: ['dublincore'],
-  fetchProperties: {
-    document: ['properties', 'versionLabel'],
-  },
-  enrichers: {
-    document: DOCUMENT_ENRICHERS,
-  },
-});
+const getNuxeoClient = (conv) =>
+  new Nuxeo({
+    baseURL: serverURL,
+    auth: {
+      token: conv.user.access.token,
+      method: 'bearerToken',
+    },
+    headers: {
+      'translate.directoryEntry': 'label',
+      'Accept-Language': conv.user.locale,
+    },
+    schemas: ['dublincore'],
+    fetchProperties: {
+      document: ['properties', 'versionLabel'],
+    },
+    enrichers: {
+      document: DOCUMENT_ENRICHERS,
+    },
+  });
 
 const getAndStoreUser = async (conv) => {
   try {
-    const user = await getNuxeoClient(conv).request('me').get();
+    const user = await getNuxeoClient(conv)
+      .request('me')
+      .get();
     // Save user data in conversation
     conv.data.user = {};
     Object.assign(conv.data.user, user);
-  } catch(e) {
+  } catch (e) {
     console.log(e);
   }
 };
@@ -281,7 +294,7 @@ const getUserDisplayName = (user) => {
     return firstname;
   }
   return `${firstname} ${lastname}`;
-}
+};
 
 const searchDocuments = async (nuxeo, term, tags) => {
   const query = getDocumentSearchQuery(tags ? tags.length : 0);
@@ -298,9 +311,9 @@ const searchDocuments = async (nuxeo, term, tags) => {
   };
   try {
     return await nuxeo.repository().query(queryOpts);
-  } catch(e) {
-      console.log(e);
-      throw e;
+  } catch (e) {
+    console.log(e);
+    throw e;
   }
 };
 
@@ -320,11 +333,10 @@ const getDocumentSearchQuery = (tagCount) => {
 const fetchDocument = async (nuxeo, id) => {
   try {
     return await nuxeo.repository().fetch(id);
-  } catch(e) {
+  } catch (e) {
     console.log(e);
     throw e;
   }
 };
 
 exports.dialogflowWebhook = functions.https.onRequest(app);
-

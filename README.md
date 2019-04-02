@@ -23,16 +23,17 @@ A [function](https://console.firebase.google.com/u/0/project/nuxeo-1b48c/functio
 The server configured by default is the [Nuxeo Demo for the Google Assistant](https://google-assistant-demo.apps.prod.nuxeo.io/nuxeo/).
 
 To configure the Nuxeo server, you need to:
+
 - Update the `serverURL` property in the [config.json](functions/config.json) file.
 - Update the [Account linking](https://console.actions.google.com/u/0/project/nuxeo-1b48c/accountlinking/) settings with:
-    - A client secret.
-    - The Authorization URL: `${serverURL}/oauth2/authorize`.
-    - The Token URL: `${serverURL}/oauth2/token`.
+  - A client secret.
+  - The Authorization URL: `${serverURL}/oauth2/authorize`.
+  - The Token URL: `${serverURL}/oauth2/token`.
 - Registrate an OAuth 2 client on the Nuxeo server by following this [documentation](https://doc.nuxeo.com/nxdoc/using-oauth2/#client-registration) with these parameters:
-    - Name: `Nuxeo Google Assistant`.
-    - Client Id: `nuxeo-google-assistant`.
-    - Client Secret: the same as for the account linking.
-    - Redirect URIs: `https://oauth-redirect.googleusercontent.com/r/nuxeo-1b48c`.
+  - Name: `Nuxeo Google Assistant`.
+  - Client Id: `nuxeo-google-assistant`.
+  - Client Secret: the same as for the account linking.
+  - Redirect URIs: `https://oauth-redirect.googleusercontent.com/r/nuxeo-1b48c`.
 
 ## Setup
 
