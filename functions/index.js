@@ -122,7 +122,8 @@ app.intent('Search - Select Document', async (conv, _, option) => {
     conv.ask(new BasicCard(getDocumentCardProperties(nuxeo, document)));
     conv.ask(new Suggestions(['Back to search results']));
   } catch (e) {
-    // TODO: handle promise rejection
+    conv.ask(`An error occurred while looking at the document.`);
+    conv.ask(new Suggestions(['Back to search results']));
   }
 });
 
@@ -133,6 +134,16 @@ app.intent(
     await search(conv, term, tags);
   },
 );
+
+app.catch((conv, error) => {
+  // Don't swallow UnauthorizedError as it is handled by the library to respond with a 401,
+  // see the 'Sign Out' intent
+  if (error instanceof UnauthorizedError) {
+    throw error;
+  }
+  console.error(error);
+  conv.ask('I encountered a glitch. Can you please say that again?');
+});
 
 // --------------------------------------------------------
 // Intent helpers
@@ -181,13 +192,14 @@ const setTagsContextParameter = (conv, tags) => {
 };
 
 const search = async (conv, term, tags) => {
+  const tagInfo =
+    tags && tags.length > 0 ? ` tagged ${tags.join(' and ')}` : '';
+  const criterion = `${term}${tagInfo}`;
   try {
     const nuxeo = getNuxeoClient(conv);
     const results = await searchDocuments(nuxeo, term, tags);
     const count = results.resultsCount;
-    const tagInfo =
-      tags && tags.length > 0 ? ` tagged ${tags.join(' and ')}` : '';
-    const criterion = `${term}${tagInfo}`;
+
     // No results
     if (count === 0) {
       conv.ask(
@@ -220,7 +232,8 @@ const search = async (conv, term, tags) => {
       conv.ask(new Suggestions(['Refine by tag', 'Try another search']));
     }
   } catch (e) {
-    // TODO: handle promise rejection
+    conv.ask(`An error occurred while searching for ${criterion}.`);
+    conv.ask(new Suggestions(['Try again', 'Try another search']));
   }
 };
 
@@ -301,7 +314,8 @@ const getAndStoreUser = async (conv) => {
     conv.data.user = {};
     Object.assign(conv.data.user, user);
   } catch (e) {
-    console.log(e);
+    // Consider that we can live without the user information
+    console.error(e);
   }
 };
 
@@ -344,7 +358,7 @@ const searchDocuments = async (nuxeo, term, tags) => {
   try {
     return await nuxeo.repository().query(queryOpts);
   } catch (e) {
-    console.log(e);
+    console.error(e);
     throw e;
   }
 };
@@ -366,7 +380,7 @@ const fetchDocument = async (nuxeo, id) => {
   try {
     return await nuxeo.repository().fetch(id);
   } catch (e) {
-    console.log(e);
+    console.error(e);
     throw e;
   }
 };
