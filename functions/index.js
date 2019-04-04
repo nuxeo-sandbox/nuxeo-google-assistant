@@ -35,7 +35,7 @@ app.intent('Default Welcome Intent', async (conv) => {
   if (!isSignedIn(conv)) {
     signIn(
       conv,
-      'Welcome to your Nuxeo assistant.\nYou can search any content from your Nuxeo instance.',
+      'Welcome to your Nuxeo assistant.\nYou can search for any content from your Nuxeo instance.',
     );
     return;
   }

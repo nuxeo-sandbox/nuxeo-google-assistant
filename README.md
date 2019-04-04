@@ -35,7 +35,9 @@ To configure the Nuxeo server, you need to:
   - Client Secret: the same as for the account linking.
   - Redirect URIs: `https://oauth-redirect.googleusercontent.com/r/nuxeo-1b48c`.
 
-## Setup
+## Development Process
+
+### Setup
 
 Once you have Node.js and npm installed, install the Firebase CLI via npm:
 
@@ -44,8 +46,6 @@ npm install -g firebase-tools
 ```
 
 For more details, read [Set up Node.js and the Firebase CLI](https://firebase.google.com/docs/functions/get-started#set-up-nodejs-and-the-firebase-cli).
-
-## Development Process
 
 ### Update the Dialogflow Agent
 
