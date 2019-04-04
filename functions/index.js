@@ -31,14 +31,16 @@ const { serverURL } = config;
 const CONTEXT_SEARCH = 'context-search';
 
 app.intent('Default Welcome Intent', async (conv) => {
-  if (!conv.user.access.token) {
-    // Sign in if needed
+  // Sign in if needed
+  if (!isSignedIn(conv)) {
     signIn(
       conv,
       'Welcome to your Nuxeo assistant.\nYou can search any content from your Nuxeo instance.',
     );
-  } else if (!conv.data.user) {
-    // Get and store user information if needed
+    return;
+  }
+  // Get and store user information if needed
+  if (!conv.data.user) {
     await getAndStoreUser(conv);
   }
   // Welcome user
@@ -49,6 +51,11 @@ app.intent('Signed In', async (conv, _, signin) => {
   switch (signin.status) {
     // User successfully completed the account linking
     case 'OK': {
+      // Access token might not be available on a Smart Display if the "Personal results" setting is disabled
+      if (!isSignedIn(conv)) {
+        smartDisplaySignInOrQuit(conv);
+        break;
+      }
       await getAndStoreUser(conv);
       const userDisplayName = getUserDisplayName(conv.data.user);
       const userInfo = userDisplayName ? ` as ${userDisplayName}` : '';
@@ -57,14 +64,20 @@ app.intent('Signed In', async (conv, _, signin) => {
       conv.ask(new Suggestions(['Search', 'Sign out']));
       break;
     }
-    // Cancelled or dismissed account linking
-    case 'CANCELLED':
-      conv.ask('What would you like to do?');
-      // Currently, when the signin.status is 'CANCELLED', trying to sign in again results in "Sorry, I did not get any response."
-      // See https://github.com/actions-on-google/actions-on-google-nodejs/issues/231#issuecomment-470281010
-      // conv.ask(new Suggestions(['Sign in', 'Quit']));
-      conv.ask(new Suggestions(['Quit']));
+    // Cancelled/dismissed account linking or Smart Display
+    case 'CANCELLED': {
+      const hasWebBrowser = conv.surface.capabilities.has(
+        'actions.capability.WEB_BROWSER',
+      );
+      if (hasWebBrowser) {
+        signInOrQuit(conv, 'What would you like to do?');
+      } else {
+        // On a Smart Display, if the "Personal results" setting is disabled, the sign in status is 'CANCELLED'
+        // See https://github.com/actions-on-google/actions-on-google-nodejs/issues/231#issuecomment-470281010
+        smartDisplaySignInOrQuit(conv);
+      }
       break;
+    }
     // System/network error or unknown status
     default:
       signIn(conv, 'Something went wrong during the sign in process.');
@@ -80,6 +93,10 @@ app.intent('Sign In', (conv) => {
 });
 
 app.intent('Search', async (conv, params) => {
+  if (!isSignedIn(conv)) {
+    signInOrQuit(conv, 'To search for documents I need you to sign in.');
+    return;
+  }
   // Reset tags
   setTagsContextParameter(conv, []);
   const { term } = params;
@@ -120,10 +137,25 @@ app.intent(
 // --------------------------------------------------------
 // Intent helpers
 // --------------------------------------------------------
+const isSignedIn = (conv) => Boolean(conv.user.access.token);
+
 const signIn = (conv, prefix) => {
   const signInPrefix = prefix ? `${prefix}\n` : '';
   conv.ask(new SignIn(`${signInPrefix}To access your content`));
 };
+
+const signInOrQuit = (conv, message) => {
+  conv.ask(message);
+  conv.ask(new Suggestions(['Sign in', 'Quit']));
+};
+
+const smartDisplaySignInOrQuit = (conv) =>
+  signInOrQuit(
+    conv,
+    'It seems like the "Personal results" setting is disabled for this device.' +
+      'To sign in and access your content, this setting needs to be enabled.' +
+      'Would you like to sign in once this setting is enabled?',
+  );
 
 const welcome = (conv) => {
   const date = new Date().getHours();
