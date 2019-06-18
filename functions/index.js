@@ -11,6 +11,7 @@ const {
   UnauthorizedError,
 } = require('actions-on-google');
 const functions = require('firebase-functions');
+const i18n = require('i18n');
 const moment = require('moment');
 const Nuxeo = require('nuxeo');
 
@@ -20,6 +21,17 @@ const config = require('./config.json');
 const app = dialogflow({
   debug: true,
   clientId: 'nuxeo-google-assistant',
+});
+
+// i18n initialization
+i18n.configure({
+  locales: ['en-US', 'fr-FR'],
+  directory: `${__dirname}/locales`,
+  defaultLocale: 'en-US',
+});
+app.middleware((conv) => {
+  i18n.setLocale(conv.user.locale);
+  moment.locale(conv.user.locale);
 });
 
 // Project configuration
@@ -33,10 +45,7 @@ const CONTEXT_SEARCH = 'context-search';
 app.intent('Default Welcome Intent', async (conv) => {
   // Sign in if needed
   if (!isSignedIn(conv)) {
-    signIn(
-      conv,
-      'Welcome to your Nuxeo assistant.\nYou can search for any content from your Nuxeo instance.',
-    );
+    signIn(conv, i18n.__('welome.signIn'));
     return;
   }
   // Get and store user information if needed
@@ -58,10 +67,12 @@ app.intent('Signed In', async (conv, _, signin) => {
       }
       await getAndStoreUser(conv);
       const userDisplayName = getUserDisplayName(conv.data.user);
-      const userInfo = userDisplayName ? ` as ${userDisplayName}` : '';
-      conv.ask(`You successfully signed in${userInfo}.`);
-      conv.ask('For example, you can say "Search for jackets".');
-      conv.ask(new Suggestions(['Search', 'Sign out']));
+      const userInfo = userDisplayName
+        ? `${i18n.__('signedIn.as')}${userDisplayName}`
+        : '';
+      conv.ask(i18n.__('signedIn.success', { userInfo }));
+      conv.ask(i18n.__('signedIn.example'));
+      conv.ask(new Suggestions([i18n.__('search'), i18n.__('signOut')]));
       break;
     }
     // Cancelled/dismissed account linking or Smart Display
@@ -70,7 +81,7 @@ app.intent('Signed In', async (conv, _, signin) => {
         'actions.capability.WEB_BROWSER',
       );
       if (hasWebBrowser) {
-        signInOrQuit(conv, 'What would you like to do?');
+        signInOrQuit(conv, i18n.__('signedIn.signInOrQuit'));
       } else {
         // On a Smart Display, if the "Personal results" setting is disabled, the sign in status is 'CANCELLED'
         // See https://github.com/actions-on-google/actions-on-google-nodejs/issues/231#issuecomment-470281010
@@ -80,7 +91,7 @@ app.intent('Signed In', async (conv, _, signin) => {
     }
     // System/network error or unknown status
     default:
-      signIn(conv, 'Something went wrong during the sign in process.');
+      signIn(conv, i18n.__('signedIn.error'));
   }
 });
 
@@ -94,7 +105,7 @@ app.intent('Sign In', (conv) => {
 
 app.intent('Search', async (conv, params) => {
   if (!isSignedIn(conv)) {
-    signInOrQuit(conv, 'To search for documents I need you to sign in.');
+    signInOrQuit(conv, i18n('search.requiresSignIn'));
     return;
   }
   // Reset tags
@@ -118,12 +129,20 @@ app.intent('Search - Select Document', async (conv, _, option) => {
   const nuxeo = getNuxeoClient(conv);
   try {
     const document = await fetchDocument(nuxeo, option);
-    conv.ask(`OK, let’s have a closer look at ${document.title}`);
+    conv.ask(
+      i18n.__('searchSelectDocument.select', {
+        documentTitle: document.title,
+      }),
+    );
     conv.ask(new BasicCard(getDocumentCardProperties(nuxeo, document)));
-    conv.ask(new Suggestions(['Back to search results']));
+    conv.ask(
+      new Suggestions([i18n.__('searchSelectDocument.backToSearchResults')]),
+    );
   } catch (e) {
-    conv.ask(`An error occurred while looking at the document.`);
-    conv.ask(new Suggestions(['Back to search results']));
+    conv.ask(i18n.__('searchSelectDocument.error'));
+    conv.ask(
+      new Suggestions([i18n.__('searchSelectDocument.backToSearchResults')]),
+    );
   }
 });
 
@@ -142,7 +161,7 @@ app.catch((conv, error) => {
     throw error;
   }
   console.error(error);
-  conv.ask('I encountered a glitch. Can you please say that again?');
+  conv.ask(i18n.__('unexpectedError'));
 });
 
 // --------------------------------------------------------
@@ -152,36 +171,31 @@ const isSignedIn = (conv) => Boolean(conv.user.access.token);
 
 const signIn = (conv, prefix) => {
   const signInPrefix = prefix ? `${prefix}\n` : '';
-  conv.ask(new SignIn(`${signInPrefix}To access your content`));
+  conv.ask(new SignIn(`${signInPrefix}${i18n.__('signIn.introduction')}`));
 };
 
 const signInOrQuit = (conv, message) => {
   conv.ask(message);
-  conv.ask(new Suggestions(['Sign in', 'Quit']));
+  conv.ask(new Suggestions([i18n.__('signIn'), i18n.__('quit')]));
 };
 
 const smartDisplaySignInOrQuit = (conv) =>
-  signInOrQuit(
-    conv,
-    'It seems like the "Personal results" setting is disabled for this device.' +
-      'To sign in and access your content, this setting needs to be enabled.' +
-      'Would you like to sign in once this setting is enabled?',
-  );
+  signInOrQuit(conv, i18n.__('smartDisplaySignInOrQuit'));
 
 const welcome = (conv) => {
   const date = new Date().getHours();
   let greetings;
   if (date < 12) {
-    greetings = 'Good morning';
+    greetings = i18n.__('welcome.goodMorning');
   } else if (date < 18) {
-    greetings = 'Good afternoon';
+    greetings = i18n.__('welcome.goodAfternoon');
   } else {
-    greetings = 'Good evening';
+    greetings = i18n.__('welcome.goodEvening');
   }
   const userDisplayName = getUserDisplayName(conv.data.user);
   const userInfo = userDisplayName ? ` ${userDisplayName}` : '';
-  conv.ask(`${greetings}${userInfo}. What can I do for you today?`);
-  conv.ask(new Suggestions(['Search', 'Sign out']));
+  conv.ask(`${greetings}${userInfo}. ${i18n.__('welcome.introduction')}`);
+  conv.ask(new Suggestions([i18n.__('search'), i18n.__('signOut')]));
 };
 
 const getSearchContextParameters = (conv) =>
@@ -192,9 +206,12 @@ const setTagsContextParameter = (conv, tags) => {
 };
 
 const search = async (conv, term, tags) => {
-  const tagInfo =
-    tags && tags.length > 0 ? ` tagged ${tags.join(' and ')}` : '';
-  const criterion = `${term}${tagInfo}`;
+  let tagInfo;
+  if (tags && tags.length > 0) {
+    const tagList = tags.join(` ${i18n.__('and')} `);
+    tagInfo = ` ${i18n.__('search.tagged')} ${tagList}`;
+  }
+  const criterion = `${term}${tagInfo || ''}`;
   try {
     const nuxeo = getNuxeoClient(conv);
     const results = await searchDocuments(nuxeo, term, tags);
@@ -202,19 +219,17 @@ const search = async (conv, term, tags) => {
 
     // No results
     if (count === 0) {
-      conv.ask(
-        `Uh oh, I didn't find any document when searching for ${criterion}.`,
-      );
-      conv.ask(new Suggestions('Try another search'));
+      conv.ask(i18n.__('search.noResultsFound', { criterion }));
+      conv.ask(new Suggestions(i18n.__('tryAnotherSearch')));
       return;
     }
     // Single result
     if (count === 1) {
-      conv.ask(`I found 1 document when searching for ${criterion}:`);
+      conv.ask(i18n.__('search.oneResultFound', { criterion }));
       conv.ask(
         new BasicCard(getDocumentCardProperties(nuxeo, results.entries[0])),
       );
-      conv.ask(new Suggestions('Try another search'));
+      conv.ask(new Suggestions(i18n.__('tryAnotherSearch')));
       return;
     }
     // Multiple results
@@ -222,18 +237,24 @@ const search = async (conv, term, tags) => {
     results.entries.forEach((doc) => {
       items[doc.uid] = getDocumentListItemProperties(nuxeo, doc);
     });
-    conv.ask(`I found ${count} documents when searching for ${criterion}:`);
+    conv.ask(i18n.__('search.resultsFound', { count, criterion }));
     // Less than 10 items, use a Caoursel, else use a list (we may want to have pagination)
     if (count <= 10) {
       conv.ask(new Carousel({ items }));
-      conv.ask(new Suggestions(['Refine by tag', 'Try another search']));
+      conv.ask(
+        new Suggestions([i18n.__('refineByTag'), i18n.__('tryAnotherSearch')]),
+      );
     } else {
       conv.ask(new List({ items }));
-      conv.ask(new Suggestions(['Refine by tag', 'Try another search']));
+      conv.ask(
+        new Suggestions([i18n.__('refineByTag'), i18n.__('tryAnotherSearch')]),
+      );
     }
   } catch (e) {
     conv.ask(`An error occurred while searching for ${criterion}.`);
-    conv.ask(new Suggestions(['Try again', 'Try another search']));
+    conv.ask(
+      new Suggestions([i18n.__('tryAgain'), i18n.__('tryAnotherSearch')]),
+    );
   }
 };
 
@@ -242,14 +263,18 @@ const getDocumentCardProperties = (nuxeo, doc) => {
     title: doc.title,
     subtitle: doc.properties['dc:description'],
     text:
-      `🕘 Last modified: ${formatDate(doc.lastModified)}  \n` +
-      `🕘 Created: ${formatDate(
+      `🕘 ${i18n.__('search.lastModified')} ${formatDate(
+        doc.lastModified,
+      )}  \n` +
+      `🕘 ${i18n.__('search.created')} ${formatDate(
         doc.properties['dc:created'],
-      )} by ${getUserDisplayName(doc.properties['dc:creator'])}  \n` +
-      `👨‍ Contributors: ${doc.properties['dc:contributors']
+      )} ${i18n.__('by')} ${getUserDisplayName(
+        doc.properties['dc:creator'],
+      )}  \n` +
+      `👨‍ ${i18n.__('search.contributors')} ${doc.properties['dc:contributors']
         .map(getUserDisplayName)
         .join(', ')}  \n` +
-      `🏳️ Tags: ${doc.contextParameters.tags}`,
+      `🏳️ ${i18n.__('search.tags')} ${doc.contextParameters.tags}`,
     image: new Image({
       url: nuxeo.authenticateURL(doc.contextParameters.thumbnail.url),
       alt: doc.title,
